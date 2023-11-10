@@ -9,6 +9,7 @@ from langchain.docstore.document import Document
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.prompts import PromptTemplate
 from langchain.vectorstores import FAISS
+import requests
 
 # Load environment variables
 load_dotenv(find_dotenv())
@@ -89,6 +90,15 @@ else:
     # ChromaDB has been initialised before, recreate instance
     vectordb = FAISS.load_local(vectordb_persist_dir, embedding)
 
+def post_feedback(query, feedback): 
+    search = vectordb.similarity_search(query + " " + feedback)
+    return search
+    # # Get result
+    # result = qa_chain({"query": query})
+    # return {
+    #     True
+    # }
+
 def get_answer_from_llm(query):    
     # Build prompt
     template = """Gedraag je als een helpvolle assistent voor mensen die op zoek zijn naar allerlei antwoorden op vragen die iets te maken hebben met de Rijksoverheid. Beantwoord deze vraag ALLEEN op basis van de gegeven bronnen, niet op basis van eigen kennis. Als je de vraag niet kan beantwoorden, verontschuldig je en zeg dat de webmaster op de hoogte is gebracht van het niet hebben van de gevraagde informatie.
@@ -122,3 +132,58 @@ def get_answer_from_llm(query):
             for doc in result["source_documents"]
         ]
     }
+
+def get_new_questions_from_llm(query):    
+    # Build prompt
+    template = """Gedraag je als een helpvolle assistent voor mensen die op zoek zijn naar allerlei antwoorden op vragen die iets te maken hebben met de Rijksoverheid. Geef geen antwoord op de vraag, maar Geef 3 nieuwe vragen die gerelateerd zijn aan deze vraag ALLEEN op basis van de gegeven bronnen, niet op basis van eigen kennis. Als je de vraag niet kan beantwoorden, verontschuldig je en zeg dat de webmaster op de hoogte is gebracht van het niet hebben van de gevraagde informatie. Houd je antwoord beknopt.
+    Bronnen: ```{context}```
+    Vraag: ```{question}```
+    Behulpzaam antwoord: """
+    qa_chain_prompt = PromptTemplate.from_template(template)
+
+    # Define search kwargs
+    search_kwargs = {"k": 5}
+
+    # Create QA chain
+    qa_chain = RetrievalQA.from_chain_type(
+        llm,
+        retriever=vectordb.as_retriever(search_kwargs=search_kwargs),
+        return_source_documents=True,
+        chain_type_kwargs={"prompt": qa_chain_prompt},
+    )
+
+    # Get result
+    result = qa_chain({"query": query})
+
+    return {
+        **result,
+        "source_documents": [
+            {
+                "page_content": doc.page_content,
+                "identifier": doc.metadata["identifier"],
+                "source": doc.metadata["source"],
+            }
+            for doc in result["source_documents"]
+        ]
+    }
+
+def get_webpage_title(url):
+    try:
+        # Send an HTTP GET request to the URL
+        response = requests.get(url)
+
+        # Check if the request was successful (status code 200)
+        if response.status_code == 200:
+            # Parse the HTML content of the web page
+            soup = BeautifulSoup(response.text, 'html.parser')
+
+            # Find the title tag and extract its text
+            title_tag = soup.find('title')
+            if title_tag is not None:
+                return title_tag.text
+            else:
+                return url
+        else:
+            return url
+    except Exception as e:
+        return "url"
