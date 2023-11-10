@@ -17,6 +17,7 @@ openai = "^1.2.2"
 python-dotenv = "^1.0.0"
 tiktoken = "^0.5.1"
 faiss-cpu = "^1.7.4"
+streamlit = "^1.28.1"
 
 
 [tool.poetry.group.dev.dependencies]

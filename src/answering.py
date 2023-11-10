@@ -60,7 +60,7 @@ Antwoord:
 vectordb_persist_dir = "./../data/faiss_index"
 if not os.path.exists(vectordb_persist_dir):
     # Load file
-    with open('./../data/qa-data.json', 'r') as file:
+    with open("./../data/qa-data.json", 'r') as file:
         data = json.load(file)
 
     # Create contents
