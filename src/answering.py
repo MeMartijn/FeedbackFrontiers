@@ -16,7 +16,10 @@ load_dotenv(find_dotenv())
 
 # Ready all models
 embedding = OpenAIEmbeddings()
-llm = ChatOpenAI(model_name="gpt-4", temperature=0)
+llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0)
+
+# Define config
+vectordb_persist_dir = "./../data/faiss_index_v2"
 
 def html_to_markdown(html_string):
     # Parse the HTML string using BeautifulSoup
@@ -27,68 +30,95 @@ def html_to_markdown(html_string):
 
     return markdown_text
 
-def html_to_markdown(html_string):
-    # Parse the HTML string using BeautifulSoup
-    soup = BeautifulSoup(html_string, 'html.parser')
+def filter_data_for_duplicates(data):
+    # Set to keep track of unique IDs
+    unique_ids = set()
 
-    # Convert the parsed HTML to Markdown using markdownify
-    markdown_text = markdownify(str(soup))
+    # List to store the filtered data
+    filtered_data = []
 
-    return markdown_text
+    # Iterate through the data
+    for item in data:
+        # Check if the ID is already in the set
+        if item['id'] not in unique_ids:
+            # Add the ID to the set
+            unique_ids.add(item['id'])
+            # Add the item to the filtered data list
+            filtered_data.append(item)
+    
+    return filtered_data
 
-def create_content_snippet(question):
-    # Get all content pieces in the answer
-    if "content" in question["answer"].keys():
-        content_pieces = list(
-            map(
-                lambda content_piece: [html_to_markdown(paragraph) for paragraph in content_piece.values()],
-                question["answer"]["content"])
+def extract_pieces_from_question(question):
+    # Set empty list for all content pieces
+    pieces = []
+
+    # Set suffix to add to each content piece
+    suffix = "\n" + (
+        ('Onderwerpen: ' + '; '.join(question['answer']['subjects']) + "\n" if 'subjects' in question['answer'].keys() else '') +
+        ('Thema\'s: ' + '; '.join(question['answer']['themes']) if 'themes' in question['answer'].keys() else '')
+    ).strip()
+
+    # Part 1: content pieces based on question
+    if "question" in question["answer"].keys():
+        if "introduction" in question["answer"].keys():
+            # Content piece 1: just the Q and A
+            pieces.append(f"Vraag: {question['answer']['question']}\nAntwoord:\n{html_to_markdown(question['answer']['introduction'])}".strip() + suffix)
+        elif "content" not in question["answer"].keys():
+            # Content piece 2: there is no content, just return the question for reference materials for the end user
+            pieces.append(f"Vraag: {question['answer']['question']}".strip() + suffix)
+        elif "content" in question["answer"].keys() and len(question["answer"]["content"]) == 1:
+            # Content piece 3: question with the only content piece
+            content = '\n'.join([html_to_markdown(paragraph_piece) for paragraph_piece in question['answer']['content'][0].values()])
+            pieces.append(f"Vraag: {question['answer']['question']}\nAntwoord:\n{content}".strip() + suffix)
+    
+    # Part 2: content pieces based on content
+    if "content" in question["answer"].keys() and len(question["answer"]["content"]) > 1:
+        for content_piece in question["answer"]["content"]:
+            content = '\n'.join([html_to_markdown(paragraph_piece) for paragraph_piece in content_piece.values()])
+            pieces.append(content.strip() + suffix)
+
+    return pieces
+
+def generate_documents(data):
+    content = []
+
+    for qa_item in data:
+        # Get all individual content pieces
+        content_pieces = extract_pieces_from_question(qa_item)
+
+        # Create documents for each piece
+        document_pieces = [
+            Document(
+                page_content=piece,
+                metadata={
+                    "source": qa_item["canonical"]
+                },
             )
-        concat_content = "\n".join([item for row in content_pieces for item in row])
-    else:
-        concat_content = ""
+            for piece in content_pieces
+        ]
 
-    return f"""Vraag: {question["question"]}
-Antwoord:
-{html_to_markdown(question["answer"]["introduction"]) if "introduction" in question["answer"].keys() else ""}
-{concat_content}
+        # Merge documents into full content list
+        content.extend(document_pieces)
+    
+    return content
 
-{"Onderwerpen: " + ", ".join(question["answer"]["subjects"]) if "subjects" in question["answer"].keys() else ""}
-{"Thema's: " + ", ".join(question["answer"]["themes"]) if "themes" in question["answer"].keys() else ""}
-{"Autoriteit: " + question["answer"]["authority"] if "authority" in question["answer"].keys() else ""}"""
+with open('./../data/qa-data.json', 'r') as file:
+    data = filter_data_for_duplicates(json.load(file))
 
-# Get vectordb
-vectordb_persist_dir = "./../data/faiss_index"
 if not os.path.exists(vectordb_persist_dir):
-    # Load file
-    with open("./../data/qa-data.json", 'r') as file:
-        data = json.load(file)
-
-    # Create contents
-    for qa in data:
-        qa["content"] = create_content_snippet(qa)
-
-    # Create documents
-    factors = [
-        Document(
-            page_content=qa_item["content"],
-            metadata={
-                "identifier": qa_item["id"],
-                "source": qa_item["canonical"]
-            },
-        )
-        for qa_item in data
-    ]
+    # Generate all documents
+    docs = generate_documents(data)
 
     # Create vector store
     vectordb = FAISS.from_documents(
-        documents=factors,
+        documents=docs,
         embedding=embedding,
     )
     vectordb.save_local(vectordb_persist_dir)
 else:
     # ChromaDB has been initialised before, recreate instance
     vectordb = FAISS.load_local(vectordb_persist_dir, embedding)
+
 
 def post_feedback(query, feedback): 
     search = vectordb.similarity_search(query + " " + feedback)
@@ -126,7 +156,6 @@ def get_answer_from_llm(query):
         "source_documents": [
             {
                 "page_content": doc.page_content,
-                "identifier": doc.metadata["identifier"],
                 "source": doc.metadata["source"],
             }
             for doc in result["source_documents"]
@@ -160,7 +189,6 @@ def get_new_questions_from_llm(query):
         "source_documents": [
             {
                 "page_content": doc.page_content,
-                "identifier": doc.metadata["identifier"],
                 "source": doc.metadata["source"],
             }
             for doc in result["source_documents"]
