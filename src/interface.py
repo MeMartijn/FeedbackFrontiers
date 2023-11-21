@@ -3,13 +3,17 @@ import streamlit as st
 
 st.write(
     """
-# Mis je hier iets?
+# Stel jouw vraag aan de overheid
+
+Ik kan je helpen met het vinden van antwoorden over meer dan 350 onderwerpen waar de overheid bij betrokken is.
 """
 )
 
 query = st.text_input(
-    "Ik mis...", "Zit er BTW op zonnepanelen?"
+    "Wat is je vraag?",
+    placeholder = "Zit er BTW op zonnepanelen?",
 )
+st.caption("Bijv. 'Wat doen waterschappen in godsnaam?' | 'Hoezo duurt het formeren van een nieuwe coalitie zo lang?'")
 
 if query:
     result = answering.get_answer_from_llm(
