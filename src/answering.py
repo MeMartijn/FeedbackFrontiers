@@ -131,7 +131,7 @@ def post_feedback(query, feedback):
 
 def get_answer_from_llm(query):    
     # Build prompt
-    template = """Gedraag je als een helpvolle assistent voor mensen die op zoek zijn naar allerlei antwoorden op vragen die iets te maken hebben met de Rijksoverheid. Beantwoord deze vraag ALLEEN op basis van de gegeven bronnen, niet op basis van eigen kennis. Als je de vraag niet kan beantwoorden, verontschuldig je en zeg dat de webmaster op de hoogte is gebracht van het niet hebben van de gevraagde informatie.
+    template = """Gedraag je als een helpvolle assistent voor mensen die op zoek zijn naar allerlei antwoorden op vragen die iets te maken hebben met de Rijksoverheid. Beantwoord deze vraag ALLEEN op basis van de gegeven bronnen, niet op basis van eigen kennis. Als je de vraag niet kan beantwoorden, verontschuldig je en zeg dat de website van de Rijksoverheid geen informatie heeft over de gestelde vraag.
     Bronnen: ```{context}```
     Vraag: ```{question}```
     Behulpzaam antwoord: """
