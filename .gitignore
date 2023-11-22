@@ -4,3 +4,5 @@ data/piwik_events.csv
 data/piwik_search_queries.csv
 .env
 data/faiss_index
+src/__pycache__
+.DS_Store
