@@ -40,6 +40,10 @@ if query:
     for source in set(list(map(lambda x: x["source"], result["source_documents"]))):
         title = answering.get_webpage_title(source)
         st.write(f"[{title}]({source})", language="markdown", line_numbers=False)
+    
+    st.divider()
+    
+    st.write("<small>_Gemaakt door [Lifely](https://lifely.nl/) in Amsterdam. Stuur [Martijn](mailto:martijn@lifely.nl) een mailtje voor de source code._</small>", unsafe_allow_html=True)
 
     # st.write("_Mogelijke vervolgvragen_")
 
