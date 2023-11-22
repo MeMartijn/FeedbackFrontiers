@@ -5,7 +5,7 @@ st.write(
     """
 # Stel jouw vraag aan de overheid
 
-Ik kan je helpen met het vinden van antwoorden over meer dan 350 onderwerpen waar de overheid bij betrokken is.
+Ik kan je helpen met het vinden van antwoorden over meer dan 350 onderwerpen en 11.207 stukken tekst waar de overheid bij betrokken is.
 """
 )
 
