@@ -1,6 +1,8 @@
 import answering
 import streamlit as st
 
+st.set_page_config(page_title="Bevraag de Overheid", page_icon="https://www.rijksoverheid.nl/binaries/content/assets/rijksoverheid/iconen/favicon.ico")
+
 hide_streamlit_style = """
             <style>
             #MainMenu {visibility: hidden;}
