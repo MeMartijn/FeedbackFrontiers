@@ -10,6 +10,7 @@ from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.prompts import PromptTemplate
 from langchain.vectorstores import FAISS
 import requests
+import utils
 
 # Load environment variables
 load_dotenv(find_dotenv())
@@ -19,7 +20,7 @@ embedding = OpenAIEmbeddings()
 llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0)
 
 # Define config
-vectordb_persist_dir = "./../data/faiss_index_v2"
+vectordb_persist_dir = utils.get_path_name("data/faiss_index_v2")
 
 def html_to_markdown(html_string):
     # Parse the HTML string using BeautifulSoup
@@ -102,7 +103,7 @@ def generate_documents(data):
     
     return content
 
-with open('./../data/qa-data.json', 'r') as file:
+with open(utils.get_path_name("data/qa-data.json"), 'r') as file:
     data = filter_data_for_duplicates(json.load(file))
 
 if not os.path.exists(vectordb_persist_dir):
