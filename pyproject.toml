@@ -6,7 +6,7 @@ authors = ["MeMartijn <martijn.schouten@icloud.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "3.11.4"
+python = "3.11.6"
 pandas = "^2.1.2"
 requests = "^2.31.0"
 beautifulsoup4 = "^4.12.2"
